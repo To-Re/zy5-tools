@@ -1,0 +1,57 @@
+# dependencies
+/node_modules/
+/.pnp/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# framework and build output
+/.next/
+/.vinext/
+/out/
+/dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# testing
+/coverage/
+/.nyc_output/
+/test-results/
+/playwright-report/
+/blob-report/
+
+# caches and temporary files
+/.cache/
+/.turbo/
+/.parcel-cache/
+.eslintcache
+*.log
+*.pid
+*.swp
+
+# editor and operating system
+.DS_Store
+Thumbs.db
+/.idea/
+/.vscode/
+
+# local credentials and environment
+*.pem
+*.key
+.env*
+!.env.example
+.dev.vars*
+!.dev.vars.example
+
+# Cloudflare local state
+.wrangler/
+wrangler.log*
+
+# local deployment and legacy Sites artifacts
+/.vercel/
+/.openai/
+/outputs/
+/work/
