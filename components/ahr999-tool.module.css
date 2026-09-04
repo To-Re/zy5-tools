@@ -148,6 +148,11 @@
 .chartScroller {
   width: 100%;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.touchControls {
+  display: none;
 }
 
 .chart {
@@ -277,5 +282,98 @@
 
   .chartPanel {
     padding-inline: 14px;
+  }
+
+  .rangeSwitch {
+    display: flex;
+    width: 100%;
+  }
+
+  .rangeSwitch button {
+    flex: 1;
+  }
+
+  .rangeSwitch button,
+  .refreshGroup button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .refreshGroup span {
+    font-size: 12px;
+  }
+
+  .legend {
+    gap: 8px 12px;
+    font-size: 11px;
+  }
+
+  .chartReading span {
+    font-size: 12px;
+  }
+
+  .chartReading strong {
+    font-size: 22px;
+  }
+
+  .error,
+  .notes {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .notes div {
+    gap: 0 14px;
+  }
+
+  .notes a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 620px), (pointer: coarse) {
+  .axisText,
+  .thresholdText {
+    font-size: 15px;
+  }
+
+  .rangeSwitch button,
+  .refreshGroup button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .notes a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .touchControls {
+    display: grid;
+    gap: 4px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line-soft);
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .touchControls input {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    accent-color: var(--accent);
+  }
+
+  .touchControls p {
+    margin: 0;
+    color: var(--faint);
+    line-height: 1.6;
   }
 }

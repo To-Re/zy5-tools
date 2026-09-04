@@ -94,6 +94,9 @@ export function EscapeTool() {
               className="code-editor transform-textarea"
               value={input}
               spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
               placeholder="输入或粘贴要处理的文本…"
               onChange={(event) => {
                 setInput(event.target.value);
@@ -133,6 +136,9 @@ export function EscapeTool() {
               className="code-editor transform-textarea result-editor"
               value={output}
               spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
               placeholder="转换结果会显示在这里"
               readOnly
             />

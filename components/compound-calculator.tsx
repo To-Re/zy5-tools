@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   calculateCompound,
   durationInYears,
@@ -119,13 +119,19 @@ function CompoundChart({ result, currency }: { result: CompoundResult; currency:
     .reverse()
     .map((point) => `L${x(point).toFixed(2)},${y(point.invested).toFixed(2)}`)
     .join(' ')} Z`;
-  const resolvedActiveIndex = activeIndex ?? result.points.length - 1;
-  const active = result.points[Math.min(resolvedActiveIndex, result.points.length - 1)];
+  const resolvedActiveIndex = Math.min(activeIndex ?? result.points.length - 1, result.points.length - 1);
+  const active = result.points[resolvedActiveIndex];
   const yTicks = Array.from(
     { length: 5 },
     (_, index) => minimum + ((maximum - minimum) * index) / 4,
   );
   const xTicks = Array.from({ length: 5 }, (_, index) => (result.durationYears * index) / 4);
+  const selectPoint = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const pointerX = ((event.clientX - rect.left) / rect.width) * width;
+    const ratio = Math.max(0, Math.min(1, (pointerX - margin.left) / plotWidth));
+    setActiveIndex(Math.round(ratio * (result.points.length - 1)));
+  };
 
   return (
     <section className="panel chart-panel">
@@ -143,18 +149,21 @@ function CompoundChart({ result, currency }: { result: CompoundResult; currency:
         </div>
       </div>
 
+      <div className="chart-scroll-region" role="region" aria-label="价值曲线，可横向滚动" tabIndex={0}>
       <svg
         className="compound-chart"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={`复利价值走势，最终价值 ${formatMoney(result.finalValue, currency)}，净投入 ${formatMoney(result.invested, currency)}`}
         onPointerMove={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          const pointerX = ((event.clientX - rect.left) / rect.width) * width;
-          const ratio = Math.max(0, Math.min(1, (pointerX - margin.left) / plotWidth));
-          setActiveIndex(Math.round(ratio * (result.points.length - 1)));
+          if (event.pointerType !== 'touch') selectPoint(event);
         }}
-        onPointerLeave={() => setActiveIndex(null)}
+        onPointerUp={(event) => {
+          if (event.pointerType === 'touch') selectPoint(event);
+        }}
+        onPointerLeave={(event) => {
+          if (event.pointerType !== 'touch') setActiveIndex(null);
+        }}
       >
         <rect
           className="chart-frame"
@@ -211,6 +220,21 @@ function CompoundChart({ result, currency }: { result: CompoundResult; currency:
         <circle className="chart-point-total" cx={x(active)} cy={y(active.total)} r="5" />
         <circle className="chart-point-invested" cx={x(active)} cy={y(active.invested)} r="4" />
       </svg>
+      </div>
+      <label className="chart-time-picker">
+        <span><span>查看时间</span><span>{formatDuration(active.timeYears)}</span></span>
+        <input
+          type="range"
+          min={0}
+          max={result.points.length - 1}
+          step={1}
+          value={resolvedActiveIndex}
+          aria-label="选择复利曲线时间"
+          aria-valuetext={`${formatDuration(active.timeYears)}，总价值 ${formatMoney(active.total, currency)}`}
+          onChange={(event) => setActiveIndex(Number(event.target.value))}
+        />
+        <small>滑动曲线查看全图，拖动滑块查看各期数值。</small>
+      </label>
     </section>
   );
 }

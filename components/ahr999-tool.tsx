@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   AHR999_API_URL,
   AHR999_CACHE_KEY,
@@ -57,6 +57,7 @@ function formatUpdatedAt(timestamp: number) {
 
 function Ahr999Chart({ points }: { points: readonly Ahr999Point[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const dateSliderId = useId();
   const width = 920;
   const height = 360;
   const margin = { top: 24, right: 66, bottom: 42, left: 58 };
@@ -90,6 +91,12 @@ function Ahr999Chart({ points }: { points: readonly Ahr999Point[] }) {
     { low: 1.2, high: 5, className: styles.waitBand },
     { low: 5, high: maximum, className: styles.highBand },
   ];
+  const selectPoint = (clientX: number, chart: SVGSVGElement) => {
+    const rect = chart.getBoundingClientRect();
+    const pointerX = ((clientX - rect.left) / rect.width) * width;
+    const ratio = Math.max(0, Math.min(1, (pointerX - margin.left) / plotWidth));
+    setActiveIndex(Math.round(ratio * (points.length - 1)));
+  };
 
   return (
     <section className={`panel ${styles.chartPanel}`}>
@@ -116,12 +123,14 @@ function Ahr999Chart({ points }: { points: readonly Ahr999Point[] }) {
           aria-label={`九神指数曲线，最新值 ${formatAhr(points.at(-1)!.ahr999)}`}
           onPointerMove={(event) => {
             if (event.pointerType === 'touch') return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            const pointerX = ((event.clientX - rect.left) / rect.width) * width;
-            const ratio = Math.max(0, Math.min(1, (pointerX - margin.left) / plotWidth));
-            setActiveIndex(Math.round(ratio * (points.length - 1)));
+            selectPoint(event.clientX, event.currentTarget);
           }}
-          onPointerLeave={() => setActiveIndex(null)}
+          onPointerUp={(event) => {
+            if (event.pointerType === 'touch') selectPoint(event.clientX, event.currentTarget);
+          }}
+          onPointerLeave={(event) => {
+            if (event.pointerType !== 'touch') setActiveIndex(null);
+          }}
         >
           {bands.map((band) => {
             const low = Math.max(minimum, band.low);
@@ -182,6 +191,20 @@ function Ahr999Chart({ points }: { points: readonly Ahr999Point[] }) {
           />
           <circle className={styles.point} cx={x(resolvedActiveIndex)} cy={y(active.ahr999)} r="5" />
         </svg>
+      </div>
+      <div className={styles.touchControls}>
+        <label htmlFor={dateSliderId}>选择日期</label>
+        <input
+          id={dateSliderId}
+          type="range"
+          min={0}
+          max={points.length - 1}
+          step={1}
+          value={resolvedActiveIndex}
+          aria-valuetext={`${formatDate(active.date)}，九神指数 ${formatAhr(active.ahr999)}`}
+          onChange={(event) => setActiveIndex(Number(event.target.value))}
+        />
+        <p>曲线可左右滑动；拖动滑块查看每日数值。</p>
       </div>
     </section>
   );

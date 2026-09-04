@@ -361,6 +361,9 @@ export function Base64Tool() {
               value={selectedOutput}
               readOnly
               spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
               aria-label="Base64 转换结果"
               placeholder="选择图片后，编码结果会显示在这里。"
             />
@@ -396,6 +399,9 @@ export function Base64Tool() {
               className="code-textarea base64-input"
               value={decodeInput}
               spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              autoComplete="off"
               onChange={(event) => { setDecodeInput(event.target.value); setDecodedImage(null); setError(null); }}
               placeholder="data:image/png;base64,iVBORw0KGgo…"
               aria-label="待解码的 Base64"

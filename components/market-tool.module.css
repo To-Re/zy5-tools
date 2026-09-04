@@ -374,6 +374,7 @@
 
 .chartFrame {
   position: relative;
+  min-width: 0;
   height: clamp(500px, calc(100dvh - 302px), 680px);
   min-height: 500px;
   background: var(--surface-strong);
@@ -473,23 +474,122 @@
   }
 }
 
+@media (max-width: 860px), (pointer: coarse) and (max-width: 1024px) {
+  /* 自选完整展开，避免第三方列表与外层页面同时纵向滚动。 */
+  .overviewFrame.crypto,
+  .overviewFrame.us {
+    height: var(--overview-content-height);
+  }
+}
+
 @media (max-width: 620px) {
+  .headerActions {
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .modeSwitch button {
+    min-width: 58px;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
   .badge {
     padding: 7px 9px;
+  }
+
+  .professionalGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .panel {
     border-radius: 16px;
   }
 
+  .sectionHeader {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .watchlistHeaderActions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  .watchlistHeaderActions button {
+    min-height: 44px;
+    padding-inline: 8px;
+    font-size: 12px;
+  }
+
+  .watchlistSearch {
+    padding: 10px;
+  }
+
+  .watchlistSearch input {
+    height: 46px;
+    padding-inline: 10px;
+    font-size: 16px;
+  }
+
+  .watchlistSearch button {
+    height: 46px;
+    min-width: 52px;
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+
+  .symbolBar {
+    gap: 8px;
+    padding: 10px;
+    overscroll-behavior-x: contain;
+  }
+
+  .symbolChip button {
+    min-height: 44px;
+    padding-inline: 11px;
+    font-size: 12px;
+  }
+
+  .symbolChip .moveSymbol,
+  .symbolChip .removeSymbol {
+    min-width: 44px;
+    font-size: 20px;
+  }
+
+  .orderHint,
+  .queryError {
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
   .chartHeader {
     display: grid;
     align-items: initial;
+    padding: 12px;
   }
 
   .chartControls {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .selectedCode {
+    max-width: none;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    font-size: 12px;
+  }
+
+  .collapseButton,
+  .compactActions button {
+    min-height: 44px;
+    font-size: 13px;
   }
 
   .compactActions {
@@ -501,13 +601,62 @@
     width: 100%;
   }
 
+  .compactActions p {
+    font-size: 12px;
+  }
+
   .chartFrame {
     height: 520px;
     min-height: 480px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
   }
 
   .footer {
     display: grid;
     gap: 7px;
+    font-size: 12px;
+  }
+
+  .footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    width: fit-content;
+  }
+}
+
+@media (pointer: coarse) {
+  .modeSwitch button,
+  .watchlistHeaderActions button,
+  .symbolChip button,
+  .collapseButton,
+  .compactActions button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .symbolChip .moveSymbol,
+  .symbolChip .removeSymbol {
+    min-width: 44px;
+    font-size: 20px;
+  }
+
+  .watchlistSearch input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .watchlistSearch button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 }

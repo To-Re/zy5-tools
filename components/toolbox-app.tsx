@@ -9,130 +9,8 @@ import { JsonDiffTool } from '@/components/json-diff-tool';
 import { JsonViewerTool } from '@/components/json-viewer-tool';
 import { MarketTool } from '@/components/market-tool';
 import { TimestampTool } from '@/components/timestamp-tool';
+import { filterToolCategories, toolCategories, tools, type ToolId } from '@/lib/tool-catalog';
 
-type ToolId =
-  | 'home'
-  | 'base64'
-  | 'timestamp'
-  | 'json-viewer'
-  | 'json-diff'
-  | 'escape'
-  | 'compound'
-  | 'crypto-market'
-  | 'ahr999'
-  | 'us-market';
-
-type ToolKind = 'local' | 'market';
-
-const tools: Array<{
-  id: Exclude<ToolId, 'home'>;
-  name: string;
-  description: string;
-  glyph: string;
-  group: string;
-  keywords?: readonly string[];
-  kind: ToolKind;
-  status: string;
-  featured?: boolean;
-  ready: boolean;
-}> = [
-  {
-    id: 'compound',
-    name: '复利计算器',
-    description: '复利 · 现金流计划 · 价值曲线',
-    glyph: '%',
-    group: '财务计算',
-    kind: 'local',
-    status: '本地',
-    featured: true,
-    ready: true,
-  },
-  {
-    id: 'base64',
-    name: '图片 Base64',
-    description: '图片 ⇄ Base64 / Data URL',
-    glyph: '64',
-    group: '编码转换',
-    kind: 'local',
-    status: '本地',
-    ready: true,
-  },
-  {
-    id: 'timestamp',
-    name: '时间戳',
-    description: 'Unix ⇄ 本地时间 / UTC / ISO',
-    glyph: 'T',
-    group: '时间日期',
-    kind: 'local',
-    status: '本地',
-    ready: true,
-  },
-  {
-    id: 'json-viewer',
-    name: 'JSON 阅读器',
-    description: '格式化 · 压缩 · 结构统计',
-    glyph: '{}',
-    group: '数据处理',
-    kind: 'local',
-    status: '本地',
-    ready: true,
-  },
-  {
-    id: 'json-diff',
-    name: 'JSON Diff',
-    description: '语义比较 · 字段路径',
-    glyph: '±',
-    group: '数据处理',
-    kind: 'local',
-    status: '本地',
-    ready: true,
-  },
-  {
-    id: 'escape',
-    name: '转义 / 反转义',
-    description: 'JSON · URL · HTML · Unicode',
-    glyph: '\\',
-    group: '编码转换',
-    kind: 'local',
-    status: '本地',
-    ready: true,
-  },
-  {
-    id: 'crypto-market',
-    name: '币价',
-    description: '自选价格 · 搜索添加 · 按需图表',
-    glyph: '₿',
-    group: '行情 加密货币 Crypto USDT',
-    keywords: ['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'BGBUSDT', 'OKBUSDT', 'ASTERUSDT', 'USDCUSDT', 'PENDLEUSDT', '币价'],
-    kind: 'market',
-    status: '实时',
-    ready: true,
-  },
-  {
-    id: 'ahr999',
-    name: '九神指数',
-    description: 'AHR999 · 估值区间 · 历史曲线',
-    glyph: '9',
-    group: '行情 加密货币 比特币 BTC 指标',
-    keywords: ['AHR999', '九神', '酒神', '定投', '抄底'],
-    kind: 'market',
-    status: '每日',
-    ready: true,
-  },
-  {
-    id: 'us-market',
-    name: '美股 / ETF',
-    description: '自选价格 · 搜索添加 · 按需图表',
-    glyph: '$',
-    group: '行情 美股 股票 ETF US',
-    keywords: ['AAPL', 'APPL', '苹果', 'AEHR', 'MRVL', 'MP', 'FSLR', 'MPFSLR', 'LMT', 'NOC', 'VOO', 'QQQ'],
-    kind: 'market',
-    status: '延迟',
-    ready: true,
-  },
-];
-
-const localTools = tools.filter((tool) => tool.kind === 'local');
 const marketTools = tools.filter((tool) => tool.kind === 'market');
 
 function getToolFromHash(): ToolId {
@@ -175,13 +53,8 @@ export function ToolboxApp() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const filteredTools = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return tools;
-    return tools.filter((tool) =>
-      `${tool.name} ${tool.description} ${tool.group} ${tool.keywords?.join(' ') ?? ''}`.toLowerCase().includes(query),
-    );
-  }, [search]);
+  const filteredCategories = useMemo(() => filterToolCategories(search), [search]);
+  const matchCount = filteredCategories.reduce((count, category) => count + category.tools.length, 0);
 
   const switchTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light';
@@ -231,6 +104,20 @@ export function ToolboxApp() {
           <span className="brand-mark">Z5</span>
           <strong>ZY5</strong><span>/ tools</span>
         </button>
+        <div className="mobile-tool-picker">
+          <select
+            aria-label="切换工具"
+            value={activeTool}
+            onChange={(event) => openTool(event.target.value as ToolId)}
+          >
+            <option value="home">工具首页</option>
+            {toolCategories.map((category) => (
+              <optgroup key={category.id} label={category.name}>
+                {category.tools.map((tool) => <option key={tool.id} value={tool.id}>{tool.name}</option>)}
+              </optgroup>
+            ))}
+          </select>
+        </div>
         <div className="global-search">
           <span className="search-icon" aria-hidden="true">⌕</span>
           <input
@@ -270,33 +157,22 @@ export function ToolboxApp() {
               <span className="nav-glyph">⌂</span>工具首页
             </button>
           </div>
-          <div className="nav-section">
-            <p className="nav-label">本地工具 <span>{String(localTools.length).padStart(2, '0')}</span></p>
-            {localTools.map((tool) => (
-              <button
-                className={`nav-item ${activeTool === tool.id ? 'active' : ''}`}
-                key={tool.id}
-                type="button"
-                aria-disabled={!tool.ready}
-                onClick={() => openTool(tool.id)}
-              >
-                <span className="nav-glyph">{tool.glyph}</span>{tool.name}
-              </button>
-            ))}
-          </div>
-          <div className="nav-section">
-            <p className="nav-label">行情 <span>{String(marketTools.length).padStart(2, '0')}</span></p>
-            {marketTools.map((tool) => (
-              <button
-                className={`nav-item ${activeTool === tool.id ? 'active' : ''}`}
-                key={tool.id}
-                type="button"
-                onClick={() => openTool(tool.id)}
-              >
-                <span className="nav-glyph">{tool.glyph}</span>{tool.name}
-              </button>
-            ))}
-          </div>
+          {toolCategories.map((category) => (
+            <div className="nav-section" key={category.id}>
+              <p className="nav-label">{category.name} <span>{category.tools.length}</span></p>
+              {category.tools.map((tool) => (
+                <button
+                  className={`nav-item ${activeTool === tool.id ? 'active' : ''}`}
+                  key={tool.id}
+                  type="button"
+                  aria-disabled={!tool.ready}
+                  onClick={() => openTool(tool.id)}
+                >
+                  <span className="nav-glyph">{tool.glyph}</span>{tool.name}
+                </button>
+              ))}
+            </div>
+          ))}
           <div className="sidebar-note">
             <strong>运行边界</strong>
             <p>数据工具留在本地<br />行情直连第三方数据源</p>
@@ -308,50 +184,42 @@ export function ToolboxApp() {
             activeWorkspace
           ) : (
             <>
-              <section className="hero">
-                <div className="hero-copy">
-                  <p className="eyebrow">~/zy5/tools</p>
-                  <h1>工具箱</h1>
-                  <p className="hero-description">编码 · 解析 · 对比 · 计算 · 行情</p>
-                </div>
-                <div className="hero-metrics" aria-label="工具站概览">
-                  <div className="hero-metric"><span>工具</span><strong>{String(tools.length).padStart(2, '0')}</strong></div>
-                  <div className="hero-metric"><span>本地</span><strong>{String(localTools.length).padStart(2, '0')}</strong></div>
-                  <div className="hero-metric"><span>自建后端</span><strong>0</strong></div>
-                </div>
-              </section>
-
-              <div className="section-heading">
-                <div>
-                  <h2>{search ? '搜索结果' : '工具'}</h2>
-                  <p>{search ? `${filteredTools.length} 个匹配项` : `${tools.length} 个工具。`}</p>
-                </div>
-              </div>
-
-              <section className="tool-grid" aria-live="polite">
-                {filteredTools.map((tool) => (
-                  <button
-                    className={`tool-card ${tool.featured ? 'featured' : ''}`}
-                    key={tool.id}
-                    type="button"
-                    onClick={() => openTool(tool.id)}
-                    aria-disabled={!tool.ready}
-                  >
-                    <span className="tool-card-top">
-                      <span className="tool-icon">{tool.glyph}</span>
-                      <span
-                        className="tool-status"
-                        data-tone={tool.kind === 'local' ? 'local' : tool.status === '实时' ? 'live' : 'delayed'}
-                      >
-                        {tool.ready ? tool.status : '开发中'}
-                      </span>
-                    </span>
-                    <h3>{tool.name}</h3>
-                    <p>{tool.description}</p>
-                    <span className="tool-arrow" aria-hidden="true">→</span>
-                  </button>
+              <h1 className="sr-only">工具首页</h1>
+              <div className="tool-categories" aria-live="polite">
+                {search.trim() && <p className="tool-search-summary">搜索结果 · {matchCount} 个匹配项</p>}
+                {filteredCategories.map((category) => (
+                  <section className="tool-category" key={category.id} aria-labelledby={`category-${category.id}`}>
+                    <div className="section-heading">
+                      <h2 id={`category-${category.id}`}>{category.name} <span>{category.tools.length}</span></h2>
+                    </div>
+                    <div className="tool-grid">
+                      {category.tools.map((tool) => (
+                        <button
+                          className="tool-card"
+                          key={tool.id}
+                          type="button"
+                          onClick={() => openTool(tool.id)}
+                          aria-disabled={!tool.ready}
+                        >
+                          <span className="tool-card-top">
+                            <span className="tool-icon">{tool.glyph}</span>
+                            <span
+                              className="tool-status"
+                              data-tone={tool.kind === 'local' ? 'local' : tool.status === '实时' ? 'live' : 'delayed'}
+                            >
+                              {tool.ready ? tool.status : '开发中'}
+                            </span>
+                          </span>
+                          <h3>{tool.name}</h3>
+                          <p>{tool.description}</p>
+                          <span className="tool-arrow" aria-hidden="true">→</span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
                 ))}
-              </section>
+                {matchCount === 0 && <p className="tool-empty-state">没有匹配的工具，换个关键词试试。</p>}
+              </div>
             </>
           )}
         </main>

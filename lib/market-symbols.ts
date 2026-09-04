@@ -137,6 +137,12 @@ export function moveMarketSymbol(
   return next;
 }
 
+export function getMarketOverviewContentHeight(symbols: readonly MarketSymbol[]): number {
+  // TradingView Market Overview 目前每行 60px；另留 96px 给页签、边距和品牌信息。
+  // 移动端按自选数量展开，第三方组件升级后需复查行高（见 docs/MOBILE.md）。
+  return symbols.length * 60 + 96;
+}
+
 export function buildMarketOverviewUrl(
   kind: MarketKind,
   theme: MarketTheme,

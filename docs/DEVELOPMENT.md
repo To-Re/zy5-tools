@@ -13,12 +13,14 @@ npm run dev
 
 默认访问 `http://localhost:3000/`。当前版本无需环境变量。
 
+移动端布局约定、PC 设备模式、手机局域网访问与真机调试见 [移动端适配与调试](MOBILE.md)。
+
 ## 新增一个工具
 
 1. 在 `components/` 新建工具组件，界面文案优先中文。
 2. 将可独立验证的逻辑放进 `lib/`，避免把计算和 DOM 操作混在一起。
-3. 在 `components/toolbox-app.tsx` 的 `ToolId` 与 `tools` 注册表中登记名称、描述、关键词和分组。
-4. 在 `activeWorkspace` 中连接组件；工具入口使用稳定的 Hash ID。
+3. 在 `lib/tool-catalog.ts` 的 `ToolId` 与 `tools` 注册表中登记名称、描述、关键词和 `category`：`development`（开发工具）、`calculation`（计算工具）或 `market`（行情）。首页、桌面导航与手机选择器共用这里的分类，`kind` 独立表示本地处理或第三方行情。
+4. 在 `components/toolbox-app.tsx` 的 `activeWorkspace` 中连接组件；工具入口使用稳定的 Hash ID。
 5. 在 `tests/` 增加正常路径、主要错误路径和关键边界测试。
 6. 更新 README 的工具清单；若改变数据流或运维边界，同步更新架构和运维文档。
 

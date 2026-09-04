@@ -218,6 +218,9 @@ export function JsonViewerTool() {
             className="code-editor"
             value={input}
             spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
             aria-label="待解析的 JSON"
             placeholder="粘贴 JSON…"
             onChange={(event) => {
@@ -264,7 +267,7 @@ export function JsonViewerTool() {
             </div>
           </div>
 
-          <div className="code-editor result-editor json-tree-shell">
+          <div className="code-editor result-editor json-tree-shell" role="region" aria-label="JSON 结构，可滚动查看" tabIndex={0}>
             {value === undefined ? (
               <div className="json-tree-empty">输入 JSON 后点击“解析”</div>
             ) : (

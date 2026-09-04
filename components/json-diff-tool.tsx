@@ -51,7 +51,8 @@ function DiffCell({ cell, side }: { cell: LineDiffCell | null; side: 'left' | 'r
 
   return (
     <div className={`line-diff-cell ${side}`} role="cell">
-      <span className="line-diff-number" aria-label={`第 ${cell.lineNumber} 行`}>
+      <span className="line-diff-number" aria-label={`${side === 'left' ? '原版本' : '新版本'}第 ${cell.lineNumber} 行`}>
+        <span className="line-diff-side" aria-hidden="true">{side === 'left' ? '原' : '新'}</span>
         {cell.lineNumber}
       </span>
       <code className="line-diff-code">
@@ -153,6 +154,9 @@ export function JsonDiffTool() {
             className="code-editor diff-editor"
             value={left}
             spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
             aria-label="原版本 JSON"
             placeholder="粘贴原版本 JSON…"
             onChange={(event) => {
@@ -173,6 +177,9 @@ export function JsonDiffTool() {
             className="code-editor diff-editor"
             value={right}
             spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            autoComplete="off"
             aria-label="新版本 JSON"
             placeholder="粘贴新版本 JSON…"
             onChange={(event) => {
@@ -221,7 +228,7 @@ export function JsonDiffTool() {
             </div>
           </div>
 
-          <div className="line-diff-table" role="table" aria-label={`${viewMode === 'formatted' ? '格式化' : '原文'} JSON 逐行对比`}>
+          <div className="line-diff-table" role="table" tabIndex={0} aria-label={`${viewMode === 'formatted' ? '格式化' : '原文'} JSON 逐行对比`}>
             <div className="line-diff-table-header" role="row">
               <div role="columnheader">原版本</div>
               <div role="columnheader">新版本</div>

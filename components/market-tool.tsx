@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
 import {
   buildMarketOverviewUrl,
   buildTradingViewChartUrl,
   createMarketSymbol,
+  getMarketOverviewContentHeight,
   getMarketProfile,
   migrateLegacyMarketWatchlist,
   moveMarketSymbol,
@@ -173,7 +174,7 @@ export function MarketTool({ kind, theme }: MarketToolProps) {
           <p>
             {isProfessional
               ? `${watchlist.length} 个自选标的；点击代码切图，也可继续搜索加入。`
-              : `${watchlist.length} 个自选标的一屏查看；蜡烛图默认收起。`}
+              : `${watchlist.length} 个自选标的；蜡烛图默认收起。`}
           </p>
         </div>
         <div className={styles.headerActions}>
@@ -229,6 +230,9 @@ export function MarketTool({ kind, theme }: MarketToolProps) {
               value={query}
               placeholder={kind === 'crypto' ? '输入币种，如 BNB' : '输入代码，如 TSLA'}
               autoComplete="off"
+              autoCapitalize="characters"
+              autoCorrect="off"
+              enterKeyHint="done"
               spellCheck={false}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -290,7 +294,10 @@ export function MarketTool({ kind, theme }: MarketToolProps) {
                 ))}
               </div>
               {reordering ? <p className={styles.orderHint}>使用 ‹ › 调整，顺序自动保存。</p> : null}
-              <div className={`${styles.overviewFrame} ${styles[kind]}`}>
+              <div
+                className={`${styles.overviewFrame} ${styles[kind]}`}
+                style={{ '--overview-content-height': `${getMarketOverviewContentHeight(watchlist)}px` } as CSSProperties}
+              >
                 <iframe
                   key={overviewUrl}
                   src={overviewUrl}
@@ -340,7 +347,7 @@ export function MarketTool({ kind, theme }: MarketToolProps) {
                 />
               </div>
             ) : (
-              <div className={styles.emptyChart}>先从左侧搜索并加入一个标的。</div>
+              <div className={styles.emptyChart}>先搜索并加入一个标的。</div>
             )}
           </section>
         ) : null}

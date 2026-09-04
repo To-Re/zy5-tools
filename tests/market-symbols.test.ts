@@ -5,6 +5,7 @@ import {
   buildMarketOverviewUrl,
   buildTradingViewChartUrl,
   createMarketSymbol,
+  getMarketOverviewContentHeight,
   getMarketProfile,
   migrateLegacyMarketWatchlist,
   moveMarketSymbol,
@@ -61,6 +62,18 @@ test('行情总览支持浏览器自选列表', () => {
   assert.deepEqual(config.tabs[0].symbols, [
     { s: 'BINANCE:BNBUSDT', d: 'BNB / USDT' },
   ]);
+});
+
+test('移动行情高度随自选数量增长，增删与重排保持尺寸一致', () => {
+  const defaults = getMarketProfile('crypto').symbols;
+  const custom = createMarketSymbol('crypto', 'SOL');
+  assert.equal(getMarketOverviewContentHeight([custom]), 156);
+  assert.equal(getMarketOverviewContentHeight(defaults), 576);
+  assert.equal(getMarketOverviewContentHeight([...defaults, custom]), 636);
+  assert.equal(getMarketOverviewContentHeight(defaults.slice(0, -1)), 516);
+  assert.equal(getMarketOverviewContentHeight([...defaults].reverse()), 576);
+  assert.equal(getMarketOverviewContentHeight(Array.from({ length: 20 }, () => custom)), 1296);
+  assert.equal(getMarketOverviewContentHeight([]), 96);
 });
 
 test('图表查询修正常见误写并生成可嵌入地址', () => {

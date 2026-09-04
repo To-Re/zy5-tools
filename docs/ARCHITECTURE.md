@@ -28,7 +28,8 @@ ZY5 Tools 是一个 local-first 的单页工具箱。除行情组件外，输入
 | --- | --- |
 | `app/layout.tsx` | 页面元信息、语言和全局样式入口 |
 | `app/page.tsx` | 根页面入口 |
-| `components/toolbox-app.tsx` | 工具注册、导航、搜索、Hash 路由和主题 |
+| `components/toolbox-app.tsx` | 工具界面、导航、Hash 路由和主题 |
+| `lib/tool-catalog.ts` | 工具注册、统一分类与搜索过滤 |
 | `components/*-tool.tsx` | 各工具交互界面 |
 | `lib/*.ts` | 可独立测试的转换、比较和计算逻辑 |
 | `tests/*.test.ts` | Node 原生测试 |
