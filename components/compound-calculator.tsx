@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import {
   calculateCompound,
   durationInYears,
+  type CashFlowAmountType,
   type CashFlowDirection,
   type CashFlowPlan,
   type CompoundInput,
@@ -12,6 +13,7 @@ import {
 } from '@/lib/compound';
 import {
   COMPOUND_CACHE_KEY,
+  COMPOUND_LEGACY_CACHE_KEY,
   parseCompoundCache,
   serializeCompoundCache,
   type ToolCurrency,
@@ -30,6 +32,7 @@ const DEFAULT_INPUT: CompoundInput = {
     {
       id: 'cash-flow-1',
       direction: 'deposit',
+      amountType: 'fixed',
       amount: 500,
       startMonth: 1,
       durationMonths: 120,
@@ -65,9 +68,9 @@ function cashFlowIntervalLabel(intervalMonths: number) {
     ?? `每 ${intervalMonths} 个月`;
 }
 
-function formatMoney(value: number, currency: Currency, compact = false) {
+function formatMoney(value: number, currency: Currency, compact = false, precise = false) {
   if (!Number.isFinite(value)) return '—';
-  const maximumFractionDigits = compact ? 1 : Math.abs(value) < 100 ? 2 : 0;
+  const maximumFractionDigits = precise ? 2 : compact ? 1 : Math.abs(value) < 100 ? 2 : 0;
   if (currency === 'USDT') {
     return `${new Intl.NumberFormat('zh-CN', {
       notation: compact ? 'compact' : 'standard',
@@ -83,21 +86,34 @@ function formatMoney(value: number, currency: Currency, compact = false) {
 }
 
 function formatDuration(timeYears: number) {
-  if (timeYears < 1 / 12) return `${Math.round(timeYears * 365)} 天`;
-  if (timeYears < 1) return `${Math.round(timeYears * 12)} 个月`;
-  const years = Math.floor(timeYears);
-  const months = Math.round((timeYears - years) * 12);
-  return months > 0 ? `${years} 年 ${months} 个月` : `${years} 年`;
+  const totalMonths = Math.floor(timeYears * 12 + 1e-9);
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+  const days = Math.round(Math.max(0, timeYears - totalMonths / 12) * 365);
+  return [years > 0 ? `${years} 年` : '', months > 0 ? `${months} 个月` : '', days > 0 ? `${days} 天` : '']
+    .filter(Boolean).join(' ') || '0 天';
 }
 
-function CompoundChart({ result, currency }: { result: CompoundResult; currency: Currency }) {
+function formatAssetPercentage(amount: number, assetBase: number) {
+  if (assetBase <= 0) return '—';
+  const ratio = amount / assetBase;
+  if (!Number.isFinite(ratio * 100)) return '超出显示范围';
+  return new Intl.NumberFormat('zh-CN', { style: 'percent', maximumFractionDigits: 2 }).format(ratio);
+}
+
+function CompoundChart({ result, currency, cashFlowPlans }: {
+  result: CompoundResult;
+  currency: Currency;
+  cashFlowPlans: CashFlowPlan[];
+}) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const points = result.periods;
   const width = 900;
   const height = 320;
   const margin = { top: 24, right: 18, bottom: 45, left: 70 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const values = result.points.flatMap((point) => [point.total, point.invested]);
+  const values = points.flatMap((point) => [point.total, point.invested]);
   const rawMinimum = Math.min(0, ...values);
   const rawMaximum = Math.max(0, ...values);
   const span = Math.max(rawMaximum - rawMinimum, Math.abs(rawMaximum) * 0.05, 1);
@@ -108,19 +124,23 @@ function CompoundChart({ result, currency }: { result: CompoundResult; currency:
   const y = (value: number) =>
     margin.top + ((maximum - value) / (maximum - minimum)) * plotHeight;
   const line = (key: 'total' | 'invested') =>
-    result.points
+    points
       .map(
         (point, index) =>
           `${index === 0 ? 'M' : 'L'}${x(point).toFixed(2)},${y(point[key]).toFixed(2)}`,
       )
       .join(' ');
-  const area = `${line('total')} ${result.points
+  const area = `${line('total')} ${points
     .slice()
     .reverse()
     .map((point) => `L${x(point).toFixed(2)},${y(point.invested).toFixed(2)}`)
     .join(' ')} Z`;
-  const resolvedActiveIndex = Math.min(activeIndex ?? result.points.length - 1, result.points.length - 1);
-  const active = result.points[resolvedActiveIndex];
+  const resolvedActiveIndex = Math.min(activeIndex ?? points.length - 1, points.length - 1);
+  const active = points[resolvedActiveIndex];
+  const partialMonth = active.month > 0 && active.timeYears * 12 < active.month - 1e-9;
+  const periodLabel = active.month === 0 ? '起始时点' : `第 ${active.month} 个月${partialMonth ? '（不足整月）' : ''}`;
+  const detailMoney = (value: number) => formatMoney(value, currency, false, true);
+  const netFlow = active.deposits - active.withdrawals;
   const yTicks = Array.from(
     { length: 5 },
     (_, index) => minimum + ((maximum - minimum) * index) / 4,
@@ -130,7 +150,10 @@ function CompoundChart({ result, currency }: { result: CompoundResult; currency:
     const rect = event.currentTarget.getBoundingClientRect();
     const pointerX = ((event.clientX - rect.left) / rect.width) * width;
     const ratio = Math.max(0, Math.min(1, (pointerX - margin.left) / plotWidth));
-    setActiveIndex(Math.round(ratio * (result.points.length - 1)));
+    const timeYears = ratio * result.durationYears;
+    const lower = Math.min(Math.floor(timeYears * 12), points.length - 1);
+    const upper = Math.min(lower + 1, points.length - 1);
+    setActiveIndex(timeYears - points[lower].timeYears <= points[upper].timeYears - timeYears ? lower : upper);
   };
 
   return (
@@ -160,9 +183,6 @@ function CompoundChart({ result, currency }: { result: CompoundResult; currency:
         }}
         onPointerUp={(event) => {
           if (event.pointerType === 'touch') selectPoint(event);
-        }}
-        onPointerLeave={(event) => {
-          if (event.pointerType !== 'touch') setActiveIndex(null);
         }}
       >
         <rect
@@ -226,15 +246,74 @@ function CompoundChart({ result, currency }: { result: CompoundResult; currency:
         <input
           type="range"
           min={0}
-          max={result.points.length - 1}
+          max={points.length - 1}
           step={1}
           value={resolvedActiveIndex}
           aria-label="选择复利曲线时间"
           aria-valuetext={`${formatDuration(active.timeYears)}，总价值 ${formatMoney(active.total, currency)}`}
           onChange={(event) => setActiveIndex(Number(event.target.value))}
         />
-        <small>滑动曲线查看全图，拖动滑块查看各期数值。</small>
+        <small>移动鼠标、点选曲线或拖动滑块查看月份；移开鼠标后保留所选明细。</small>
       </label>
+
+      <section className="chart-period-detail" aria-label="所选月份现金流明细">
+        <div className="chart-period-heading">
+          <h3>{periodLabel} · 现金流明细</h3>
+          <span>{active.month === 0 ? '初始本金及立即执行的计划' : `${formatDuration(active.startTimeYears)} → ${formatDuration(active.timeYears)}`}</span>
+        </div>
+        <div className="chart-period-summary">
+          <div>
+            <span>本期投入</span>
+            <strong>{detailMoney(active.deposits)}</strong>
+            <small>占执行前资产 {formatAssetPercentage(active.deposits, active.valueBeforeCashFlows)}</small>
+          </div>
+          <div>
+            <span>本期取走</span>
+            <strong>{detailMoney(active.withdrawals)}</strong>
+            <small>占执行前资产 {formatAssetPercentage(active.withdrawals, active.valueBeforeCashFlows)}</small>
+          </div>
+          <div>
+            <span>本期净流入</span>
+            <strong>{netFlow > 0 ? '+' : ''}{detailMoney(netFlow)}</strong>
+            <small>投入 − 取走</small>
+          </div>
+          <div>
+            <span>本期收益</span>
+            <strong>{detailMoney(active.periodInterest)}</strong>
+            <small>由期初资产产生的收益</small>
+          </div>
+        </div>
+        <dl className="chart-period-balances">
+          <div><dt>期初资产</dt><dd>{detailMoney(active.openingValue)}</dd></div>
+          <div><dt>执行前资产（计息后）</dt><dd>{detailMoney(active.valueBeforeCashFlows)}</dd></div>
+          <div><dt>执行后资产</dt><dd>{detailMoney(active.total)}</dd></div>
+        </dl>
+
+        {active.cashFlows.length > 0 ? (
+          <div className="chart-period-table-scroll" role="region" aria-label="本期执行的现金流计划" tabIndex={0}>
+            <table className="chart-period-table">
+              <thead><tr><th scope="col">计划</th><th scope="col">执行方式</th><th scope="col">本期金额</th><th scope="col">占执行前资产</th></tr></thead>
+              <tbody>
+                {active.cashFlows.map((flow) => (
+                  <tr key={flow.planId}>
+                    <th scope="row">计划 {String(cashFlowPlans.findIndex((plan) => plan.id === flow.planId) + 1).padStart(2, '0')} · {flow.direction === 'deposit' ? '投入' : '取走'}</th>
+                    <td>{flow.amountType === 'percentage' ? `当前资产的 ${flow.configuredAmount}%` : '固定金额'}</td>
+                    <td>{detailMoney(flow.amount)}</td>
+                    <td>{formatAssetPercentage(flow.amount, active.valueBeforeCashFlows)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="chart-period-empty">本期没有现金流计划执行，资产仅按设定利率变化。</p>}
+
+        <p className="chart-period-note">
+          {active.valueBeforeCashFlows > 0
+            ? '所有占比均以本期计息后、执行现金流前的资产为基数。'
+            : '执行前资产不大于 0，占比不适用；百分比计划的实际金额为 0。'}
+          {active.month > 0 && ' 本期包含上个期末之后、所选期末当天及之前的现金流。'}
+        </p>
+      </section>
     </section>
   );
 }
@@ -321,7 +400,10 @@ export function CompoundCalculator() {
     let cached: ReturnType<typeof parseCompoundCache> = null;
     let storageAvailable = true;
     try {
-      cached = parseCompoundCache(window.localStorage.getItem(COMPOUND_CACHE_KEY));
+      cached = parseCompoundCache(
+        window.localStorage.getItem(COMPOUND_CACHE_KEY)
+          ?? window.localStorage.getItem(COMPOUND_LEGACY_CACHE_KEY),
+      );
     } catch {
       storageAvailable = false;
     }
@@ -344,12 +426,7 @@ export function CompoundCalculator() {
     try {
       window.localStorage.setItem(COMPOUND_CACHE_KEY, serializeCompoundCache(input, currency));
     } catch {
-      try {
-        window.localStorage.removeItem(COMPOUND_CACHE_KEY);
-        nextStatus = '仅当前会话';
-      } catch {
-        nextStatus = '保存失败，旧缓存仍保留';
-      }
+      nextStatus = '本次未保存，刷新可能丢失';
     }
     const frame = window.requestAnimationFrame(() => setCacheStatus(nextStatus));
     return () => window.cancelAnimationFrame(frame);
@@ -383,6 +460,7 @@ export function CompoundCalculator() {
         {
           id,
           direction: 'deposit',
+          amountType: 'fixed',
           amount: 500,
           startMonth: 1,
           durationMonths,
@@ -399,13 +477,24 @@ export function CompoundCalculator() {
     }));
   };
 
+  const changeAmountType = (id: string, amountType: CashFlowAmountType) => {
+    setInput((current) => ({
+      ...current,
+      cashFlows: current.cashFlows.map((plan) =>
+        plan.id === id && plan.amountType !== amountType
+          ? { ...plan, amountType, amount: 0 }
+          : plan,
+      ),
+    }));
+  };
+
   return (
     <>
       <header className="workspace-header">
         <div>
           <p className="eyebrow">复利</p>
           <h1>复利计算器</h1>
-          <p>输入本金与利率，用多条现金流计划模拟投入、拿走和价值走势。</p>
+          <p>输入本金与利率，按固定金额或当前资产比例模拟投入、拿走和价值走势。</p>
         </div>
         <span className="local-badge"><i className="status-dot" />仅本地计算</span>
       </header>
@@ -541,14 +630,36 @@ export function CompoundCalculator() {
                             <option value="withdrawal">拿走</option>
                           </select>
                         </div>
+                        <div className="field">
+                          <label htmlFor={`${plan.id}-amount-type`}>计量方式</label>
+                          <select
+                            id={`${plan.id}-amount-type`}
+                            value={plan.amountType}
+                            onChange={(event) => changeAmountType(plan.id, event.target.value as CashFlowAmountType)}
+                          >
+                            <option value="fixed">固定金额</option>
+                            <option value="percentage">当前资产百分比</option>
+                          </select>
+                        </div>
                         <NumberField
+                          key={plan.amountType}
                           id={`${plan.id}-amount`}
-                          label="每期金额"
+                          label={plan.amountType === 'percentage' ? '每期比例' : '每期金额'}
                           min={0}
+                          max={plan.amountType === 'percentage' ? 100 : undefined}
+                          step={plan.amountType === 'percentage' ? 0.1 : 'any'}
+                          suffix={plan.amountType === 'percentage' ? '%' : undefined}
                           value={plan.amount}
                           onChange={(value) => updateCashFlow(plan.id, 'amount', value)}
                         />
                       </div>
+
+                      <p className="cash-flow-summary">
+                        {plan.amountType === 'percentage'
+                          ? '每次按当时资产计算，先计息，再投入或拿走。'
+                          : '每次使用相同金额。'}
+                        {' '}切换计量方式后需重新填写数值。
+                      </p>
 
                       <div className="cash-flow-schedule-grid">
                         <NumberField
@@ -591,6 +702,9 @@ export function CompoundCalculator() {
                         {plan.startMonth === 0 ? '立即开始' : `${plan.startMonth} 个月后开始`}
                         {' · '}{cashFlowIntervalLabel(plan.intervalMonths)}
                         {plan.direction === 'deposit' ? '投入' : '拿走'}
+                        {plan.amountType === 'percentage'
+                          ? `当前资产的 ${plan.amount}%`
+                          : formatMoney(plan.amount, currency)}
                         {' · '}持续 {plan.durationMonths} 个月
                       </p>
                     </article>
@@ -632,9 +746,9 @@ export function CompoundCalculator() {
                   <span className="metric-context">最终价值 + 拿走 − 投入</span>
                 </div>
               </div>
-              <CompoundChart result={calculation.result} currency={currency} />
+              <CompoundChart result={calculation.result} currency={currency} cashFlowPlans={input.cashFlows} />
               <div className="assumption-note">
-                <strong>计算口径：</strong>“首次 0 个月后”表示立即执行；计划在有效区间内按周期发生，终点当天的现金流计入。负余额代表计划资金不足。结果是数学模拟，未计税费、手续费、通胀和市场波动。
+                <strong>计算口径：</strong>“首次 0 个月后”表示立即执行；计划在有效区间内按周期发生，终点当天的现金流计入。同一时点的计划共用计息后、执行前的资产基数；百分比投入表示从外部追加相应资金。资产不大于 0 时，百分比投入和拿走均为 0，固定金额计划照常执行。负余额代表计划资金不足。结果是数学模拟，未计税费、手续费、通胀和市场波动。
               </div>
             </>
           ) : null}

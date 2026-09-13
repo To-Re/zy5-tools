@@ -1,8 +1,10 @@
 export type CashFlowDirection = 'deposit' | 'withdrawal';
+export type CashFlowAmountType = 'fixed' | 'percentage';
 
 export type CashFlowPlan = {
   id: string;
   direction: CashFlowDirection;
+  amountType: CashFlowAmountType;
   amount: number;
   startMonth: number;
   durationMonths: number;
@@ -26,6 +28,27 @@ export type CompoundPoint = {
   interest: number;
 };
 
+export type CashFlowExecution = {
+  planId: string;
+  direction: CashFlowDirection;
+  amountType: CashFlowAmountType;
+  configuredAmount: number;
+  amount: number;
+  // Null when the asset base is nonpositive or the percentage exceeds numeric range.
+  assetPercentage: number | null;
+};
+
+export type CompoundPeriod = CompoundPoint & {
+  month: number;
+  startTimeYears: number;
+  openingValue: number;
+  valueBeforeCashFlows: number;
+  periodInterest: number;
+  deposits: number;
+  withdrawals: number;
+  cashFlows: CashFlowExecution[];
+};
+
 export type CompoundResult = {
   durationYears: number;
   finalValue: number;
@@ -36,6 +59,7 @@ export type CompoundResult = {
   totalDeposits: number;
   totalWithdrawals: number;
   points: CompoundPoint[];
+  periods: CompoundPeriod[];
 };
 
 const EPSILON = 1e-9;
@@ -83,6 +107,12 @@ export function validateCompoundInput(input: CompoundInput) {
     if (plan.direction !== 'deposit' && plan.direction !== 'withdrawal') {
       throw new Error(`现金流计划 ${index + 1} 的类型无效。`);
     }
+    if (plan.amountType !== 'fixed' && plan.amountType !== 'percentage') {
+      throw new Error(`现金流计划 ${index + 1} 的金额方式无效，请选择固定金额或资产百分比。`);
+    }
+    if (plan.amountType === 'percentage' && (plan.amount < 0 || plan.amount > 100)) {
+      throw new Error(`现金流计划 ${index + 1} 的资产百分比必须在 0 到 100 之间。`);
+    }
     if (plan.amount < 0) {
       throw new Error(`现金流计划 ${index + 1} 的金额不能为负数，请通过类型选择投入或拿走。`);
     }
@@ -119,64 +149,135 @@ export function validateCompoundInput(input: CompoundInput) {
   }
 }
 
-function geometricSeries(ratio: number, count: number) {
-  if (count <= 0) return 0;
-  const delta = ratio - 1;
-  if (delta === 0) return count;
-  return Math.expm1(count * Math.log1p(delta)) / delta;
+type CashFlowSnapshot = CompoundPoint & {
+  cashFlowCount: number;
+  totalDeposits: number;
+  totalWithdrawals: number;
+};
+
+// Use a stable sum so reordering simultaneous plans cannot change rounding.
+function sumAmounts(amounts: number[]) {
+  return amounts.sort((left, right) => left - right).reduce((total, amount) => total + amount, 0);
 }
 
-function valueAtTimeWithPlans(
-  input: CompoundInput,
-  timeYears: number,
-  totalDuration: number,
-) {
-  const annualRate = input.annualRatePct / 100;
-  const periodicBase = 1 + annualRate / input.compoundsPerYear;
-  const growth = (years: number) => Math.pow(periodicBase, input.compoundsPerYear * years);
-
-  let total = input.principal * growth(timeYears);
-  let invested = input.principal;
-  let cashFlowCount = 0;
-  let totalDeposits = input.principal;
-  let totalWithdrawals = 0;
-
-  for (const plan of input.cashFlows) {
-    if (plan.amount === 0) continue;
-    const startYears = plan.startMonth / 12;
-    const countingTime = Math.min(timeYears, totalDuration);
-    if (countingTime + EPSILON < startYears) continue;
-
-    const plannedCount = Math.ceil(plan.durationMonths / plan.intervalMonths - EPSILON);
-    const elapsedMonths = (countingTime - startYears) * 12;
-    const elapsedCount = Math.floor(elapsedMonths / plan.intervalMonths + EPSILON) + 1;
-    const count = Math.max(0, Math.min(plannedCount, elapsedCount));
-    if (count === 0) continue;
-
-    const signedAmount = plan.direction === 'withdrawal' ? -plan.amount : plan.amount;
-    const mostRecentTime = (plan.startMonth + (count - 1) * plan.intervalMonths) / 12;
-    const ratio = growth(plan.intervalMonths / 12);
-    const residualGrowth = growth(Math.max(0, timeYears - mostRecentTime));
-    total += signedAmount * residualGrowth * geometricSeries(ratio, count);
-    invested += signedAmount * count;
-    cashFlowCount += count;
-    if (signedAmount > 0) totalDeposits += signedAmount * count;
-    else totalWithdrawals += Math.abs(signedAmount) * count;
-  }
-
-  if (![total, invested, totalDeposits, totalWithdrawals].every(Number.isFinite)) {
-    throw new Error('结果超出可计算范围，请缩短时长或降低利率。');
-  }
-
+function toPoint(snapshot: CashFlowSnapshot): CompoundPoint {
   return {
-    timeYears,
-    total,
-    invested,
-    interest: total - invested,
-    cashFlowCount,
-    totalDeposits,
-    totalWithdrawals,
+    timeYears: snapshot.timeYears,
+    total: snapshot.total,
+    invested: snapshot.invested,
+    interest: snapshot.interest,
   };
+}
+
+function createCalculation(input: CompoundInput, totalDuration: number) {
+  const periodicBase = 1 + input.annualRatePct / 100 / input.compoundsPerYear;
+  const growth = (years: number) => Math.pow(periodicBase, input.compoundsPerYear * years);
+  const initial: CashFlowSnapshot = {
+    timeYears: 0,
+    total: input.principal,
+    invested: input.principal,
+    interest: 0,
+    cashFlowCount: 0,
+    totalDeposits: input.principal,
+    totalWithdrawals: 0,
+  };
+  const snapshots: CashFlowSnapshot[] = [];
+  const periods: CompoundPeriod[] = [];
+  let previous = initial;
+
+  function appendPeriod(month: number, timeYears: number, executePlans: boolean) {
+    const startTimeYears = previous.timeYears;
+    const openingValue = previous.total;
+    const valueBeforeCashFlows = openingValue * growth(timeYears - startTimeYears);
+    const assetBase = Math.max(0, valueBeforeCashFlows);
+    const cashFlows: CashFlowExecution[] = executePlans ? input.cashFlows
+      .filter((plan) => {
+        // Configured zero amounts are no-ops. Nonzero percentages still execute
+        // against an empty asset base, producing a zero-amount history entry.
+        return plan.amount !== 0 && month >= plan.startMonth &&
+          month < plan.startMonth + plan.durationMonths &&
+          (month - plan.startMonth) % plan.intervalMonths === 0;
+      })
+      .map((plan) => {
+        const amount = plan.amountType === 'percentage' ? assetBase * (plan.amount / 100) : plan.amount;
+        const assetPercentage = valueBeforeCashFlows > 0 ? amount / valueBeforeCashFlows * 100 : null;
+        return {
+          planId: plan.id,
+          direction: plan.direction,
+          amountType: plan.amountType,
+          configuredAmount: plan.amount,
+          amount,
+          assetPercentage: assetPercentage !== null && Number.isFinite(assetPercentage) ? assetPercentage : null,
+        };
+      })
+      .sort((left, right) => left.planId < right.planId ? -1 : left.planId > right.planId ? 1 : 0) : [];
+    const deposits = sumAmounts(cashFlows.filter((flow) => flow.direction === 'deposit').map((flow) => flow.amount));
+    const withdrawals = sumAmounts(cashFlows.filter((flow) => flow.direction === 'withdrawal').map((flow) => flow.amount));
+    const total = valueBeforeCashFlows + deposits - withdrawals;
+    const totalDeposits = previous.totalDeposits + deposits;
+    const totalWithdrawals = previous.totalWithdrawals + withdrawals;
+    const invested = totalDeposits - totalWithdrawals;
+    const interest = total - invested;
+    const periodInterest = valueBeforeCashFlows - openingValue;
+    if (![valueBeforeCashFlows, total, invested, interest, periodInterest, totalDeposits, totalWithdrawals].every(Number.isFinite) ||
+      cashFlows.some((flow) => !Number.isFinite(flow.amount))) {
+      throw new Error('结果超出可计算范围，请缩短时长或降低利率。');
+    }
+    previous = {
+      timeYears,
+      total,
+      invested,
+      interest,
+      cashFlowCount: previous.cashFlowCount + cashFlows.length,
+      totalDeposits,
+      totalWithdrawals,
+    };
+    snapshots.push(previous);
+    periods.push({
+      ...toPoint(previous),
+      month,
+      startTimeYears,
+      openingValue,
+      valueBeforeCashFlows,
+      periodInterest,
+      deposits,
+      withdrawals,
+      cashFlows,
+    });
+  }
+
+  // All plans execute at integer month boundaries. The partial final period
+  // accrues interest only; it never borrows the next month's scheduled flows.
+  const completeMonths = Math.floor((totalDuration + EPSILON) * 12);
+  for (let month = 0; month <= completeMonths; month += 1) {
+    const timeYears = month > 0 && Math.abs(month / 12 - totalDuration) <= EPSILON
+      ? totalDuration
+      : month / 12;
+    appendPeriod(month, timeYears, true);
+  }
+  if (totalDuration > previous.timeYears) {
+    appendPeriod(completeMonths + 1, totalDuration, false);
+  }
+
+  // Fixed and percentage amounts share this history, so monthly details,
+  // arbitrary queries and chart samples all use identical balances.
+  const evaluate = (timeYears: number): CashFlowSnapshot => {
+    let lower = 0;
+    let upper = snapshots.length;
+    while (lower < upper) {
+      const middle = Math.floor((lower + upper) / 2);
+      if (snapshots[middle].timeYears <= timeYears + EPSILON) lower = middle + 1;
+      else upper = middle;
+    }
+    const snapshot = lower === 0 ? initial : snapshots[lower - 1];
+    const total = snapshot.total * growth(Math.max(0, timeYears - snapshot.timeYears));
+    const interest = total - snapshot.invested;
+    if (![total, interest].every(Number.isFinite)) {
+      throw new Error('结果超出可计算范围，请缩短时长或降低利率。');
+    }
+    return { ...snapshot, timeYears, total, interest };
+  };
+  return { evaluate, periods };
 }
 
 export function valueAtTime(
@@ -184,7 +285,12 @@ export function valueAtTime(
   timeYears: number,
   totalDuration = durationInYears(input),
 ) {
-  return valueAtTimeWithPlans(input, timeYears, totalDuration);
+  validateCompoundInput(input);
+  if (![timeYears, totalDuration].every((value) => Number.isFinite(value) && value >= 0)) {
+    throw new Error('查询时间与现金流截止时间必须是有效的非负数字。');
+  }
+  // Future cash flows are irrelevant to this query, including future overflow.
+  return createCalculation(input, Math.min(timeYears, totalDuration)).evaluate(timeYears);
 }
 
 export function calculateCompound(input: CompoundInput, requestedSamples = 121): CompoundResult {
@@ -200,9 +306,10 @@ export function calculateCompound(input: CompoundInput, requestedSamples = 121):
   }
 
   const samples = Math.max(24, Math.min(500, Math.round(requestedSamples)));
+  const { evaluate, periods } = createCalculation(input, totalDuration);
   const points = Array.from({ length: samples }, (_, index) => {
     const timeYears = (totalDuration * index) / (samples - 1);
-    const point = valueAtTimeWithPlans(input, timeYears, totalDuration);
+    const point = evaluate(timeYears);
     return {
       timeYears: point.timeYears,
       total: point.total,
@@ -210,7 +317,7 @@ export function calculateCompound(input: CompoundInput, requestedSamples = 121):
       interest: point.interest,
     };
   });
-  const finalPoint = valueAtTimeWithPlans(input, totalDuration, totalDuration);
+  const finalPoint = evaluate(totalDuration);
   points[points.length - 1] = {
     timeYears: totalDuration,
     total: finalPoint.total,
@@ -228,5 +335,6 @@ export function calculateCompound(input: CompoundInput, requestedSamples = 121):
     totalDeposits: finalPoint.totalDeposits,
     totalWithdrawals: finalPoint.totalWithdrawals,
     points,
+    periods,
   };
 }

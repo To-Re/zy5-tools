@@ -259,6 +259,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .cash-flow-item-header button { min-width: 44px; min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--faint); cursor: pointer; font-size: 9px; }
 .cash-flow-item-header button:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); color: var(--danger); }
 .cash-flow-money-row { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr); gap: 8px; }
+.cash-flow-money-row > .field:last-child { grid-column: 1 / -1; }
 .cash-flow-schedule-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .cash-flow-summary { margin: 10px 1px 0; color: var(--faint); font-size: 9px; line-height: 1.55; }
 .cash-flow-empty { padding: 18px 12px; border: 1px dashed var(--line); border-radius: 12px; color: var(--faint); font-size: 10px; text-align: center; }
@@ -275,7 +276,30 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .chart-reading strong { display: block; font-size: 13px; font-variant-numeric: tabular-nums; }
 .chart-reading span { color: var(--faint); font-size: 10px; }
 .chart-scroll-region { min-width: 0; max-width: 100%; overflow-x: auto; }
-.chart-time-picker { display: none; }
+.chart-time-picker { display: grid; gap: 6px; margin-top: 12px; color: var(--muted); font-size: 12px; }
+.chart-time-picker > span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.chart-time-picker input { width: 100%; min-height: 30px; margin: 0; accent-color: var(--accent); }
+.chart-time-picker small { color: var(--faint); font-size: 11px; }
+.chart-period-detail { min-width: 0; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+.chart-period-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
+.chart-period-heading h3 { margin: 0; font-size: 13px; }
+.chart-period-heading > span { color: var(--muted); font-size: 11px; }
+.chart-period-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.chart-period-summary > div { min-width: 0; padding: 12px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface-strong); }
+.chart-period-summary span, .chart-period-summary small { display: block; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.chart-period-summary strong { display: block; margin: 6px 0; font-size: 14px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.chart-period-balances { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+.chart-period-balances > div { min-width: 0; }
+.chart-period-balances dt { color: var(--muted); font-size: 10px; }
+.chart-period-balances dd { margin: 5px 0 0; font-size: 12px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.chart-period-table-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+.chart-period-table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 11px; }
+.chart-period-table th, .chart-period-table td { padding: 10px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; font-variant-numeric: tabular-nums; }
+.chart-period-table thead th { color: var(--muted); font-weight: 500; }
+.chart-period-table tbody th { font-weight: 600; }
+.chart-period-table th:nth-child(n+3), .chart-period-table td:nth-child(n+3) { text-align: right; }
+.chart-period-empty, .chart-period-note { margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+.chart-period-note { color: var(--faint); }
 .chart-legend { display: flex; gap: 15px; margin: 0 0 3px; color: var(--muted); font-size: 10px; }
 .legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .legend-line { width: 18px; height: 2px; border-radius: 999px; background: var(--accent); }
@@ -298,6 +322,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 @container (max-width: 1040px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@container (max-width: 700px) {
+  .chart-period-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @container (max-width: 920px) {
@@ -667,6 +695,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .control-panel { padding: 16px; }
   .compound-mobile-summary { margin-top: -2px; }
   .chart-panel { padding-inline: 12px; }
+  .chart-period-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart-period-balances { grid-template-columns: minmax(0, 1fr); }
+  .chart-period-balances > div { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; }
+  .chart-period-summary span, .chart-period-summary small, .chart-period-balances dt { font-size: 11px; }
   .compound-chart { min-width: 600px; min-height: 0; touch-action: pan-x pan-y pinch-zoom; }
   .compound-chart .chart-axis-text { font-size: 16px; }
   .chart-scroll-region { overscroll-behavior-inline: contain; }
@@ -747,10 +779,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .input-shell input, .field select, .inline-field select { min-height: 44px; }
   .json-tree-toggle, .json-tree-toggle-placeholder { width: 44px; height: 44px; flex-basis: 44px; }
   .json-tree-row { min-height: 44px; align-items: center; }
-  .chart-time-picker { display: grid; gap: 6px; margin-top: 12px; color: var(--muted); font-size: 12px; }
-  .chart-time-picker > span { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
-  .chart-time-picker input { width: 100%; min-height: 44px; margin: 0; accent-color: var(--accent); }
-  .chart-time-picker small { color: var(--faint); font-size: 11px; }
+  .chart-time-picker input { min-height: 44px; }
   .compound-chart { touch-action: pan-x pan-y pinch-zoom; }
 }
 @media (prefers-reduced-motion: reduce) {

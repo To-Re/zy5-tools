@@ -1,8 +1,9 @@
-import type { CashFlowDirection, CompoundInput } from './compound';
+import type { CashFlowAmountType, CashFlowDirection, CompoundInput } from './compound';
 
 export type ToolCurrency = 'CNY' | 'USD' | 'USDT';
 
-export const COMPOUND_CACHE_KEY = 'zy5-tools-compound-v1';
+export const COMPOUND_CACHE_KEY = 'zy5-tools-compound-v2';
+export const COMPOUND_LEGACY_CACHE_KEY = 'zy5-tools-compound-v1';
 export const JSON_VIEWER_CACHE_KEY = 'zy5-tools-json-viewer-v1';
 export const JSON_VIEWER_CACHE_MAX_CHARS = 1_000_000;
 
@@ -28,7 +29,7 @@ function isCurrency(value: unknown): value is ToolCurrency {
   return value === 'CNY' || value === 'USD' || value === 'USDT';
 }
 
-function parseCompoundInput(value: unknown): CompoundInput | null {
+function parseCompoundInput(value: unknown, version: 1 | 2): CompoundInput | null {
   if (!isRecord(value)) return null;
   if (!isFiniteNumber(value.principal) || value.principal < 0) return null;
   if (!isFiniteNumber(value.annualRatePct)) return null;
@@ -46,7 +47,10 @@ function parseCompoundInput(value: unknown): CompoundInput | null {
     if (!isRecord(candidate)) return null;
     const direction = candidate.direction;
     if (direction !== 'deposit' && direction !== 'withdrawal') return null;
+    const amountType = version === 1 ? 'fixed' : candidate.amountType;
+    if (amountType !== 'fixed' && amountType !== 'percentage') return null;
     if (!isFiniteNumber(candidate.amount) || candidate.amount < 0) return null;
+    if (amountType === 'percentage' && candidate.amount > 100) return null;
     if (!isIntegerInRange(candidate.startMonth, 0, MAX_SCHEDULE_MONTHS)) return null;
     if (!isIntegerInRange(candidate.durationMonths, 1, MAX_SCHEDULE_MONTHS)) return null;
     if (!isIntegerInRange(candidate.intervalMonths, 1, MAX_SCHEDULE_MONTHS)) return null;
@@ -54,6 +58,7 @@ function parseCompoundInput(value: unknown): CompoundInput | null {
     return {
       id: `cached-cash-flow-${index + 1}`,
       direction: direction as CashFlowDirection,
+      amountType: amountType as CashFlowAmountType,
       amount: candidate.amount,
       startMonth: candidate.startMonth,
       durationMonths: candidate.durationMonths,
@@ -82,8 +87,8 @@ export function parseCompoundCache(raw: string | null): {
 
   try {
     const value: unknown = JSON.parse(raw);
-    if (!isRecord(value) || value.version !== 1 || !isCurrency(value.currency)) return null;
-    const input = parseCompoundInput(value.input);
+    if (!isRecord(value) || (value.version !== 1 && value.version !== 2) || !isCurrency(value.currency)) return null;
+    const input = parseCompoundInput(value.input, value.version);
     return input ? { input, currency: value.currency } : null;
   } catch {
     return null;
@@ -92,12 +97,13 @@ export function parseCompoundCache(raw: string | null): {
 
 export function serializeCompoundCache(input: CompoundInput, currency: ToolCurrency): string {
   return JSON.stringify({
-    version: 1,
+    version: 2,
     currency,
     input: {
       ...input,
       cashFlows: input.cashFlows.map((plan) => ({
         direction: plan.direction,
+        amountType: plan.amountType,
         amount: plan.amount,
         startMonth: plan.startMonth,
         durationMonths: plan.durationMonths,

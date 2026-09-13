@@ -45,7 +45,7 @@ ZY5 Tools 是一个 local-first 的单页工具箱。除行情组件外，输入
 - 图片 Base64、时间戳、JSON、转义、复利和 AHR999 计算均在当前页面执行。
 - 复利参数和 JSON 阅读器草稿会自动保存在当前浏览器；其他本地工具输入刷新后消失。
 - 主题保存在 `zy5-tools-theme`。
-- 复利与 JSON 缓存分别保存在 `zy5-tools-compound-v1` 和 `zy5-tools-json-viewer-v1`。
+- 复利与 JSON 缓存分别保存在 `zy5-tools-compound-v2` 和 `zy5-tools-json-viewer-v1`。复利新版缓存不存在时读取旧 `zy5-tools-compound-v1`，将原计划按固定金额恢复；之后仅写 v2，保留百分比计划的计量方式。
 - 行情自选分别保存在 `zy5-tools-watchlist-v2:crypto` 和 `zy5-tools-watchlist-v2:us`；首次读取旧版时会做一次兼容迁移。
 - AHR999 最近计算结果保存在 `zy5-tools-ahr999-v1`，用于降低刷新频率和在短时网络故障时保留上次结果。
 
