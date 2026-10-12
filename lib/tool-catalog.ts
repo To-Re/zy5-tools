@@ -1,3 +1,6 @@
+export const LABOR_TOOL_IDS = ['labor', 'labor-cost', 'salary-net', 'retirement-pension', 'annual-tax', 'retirement-date', 'benefit-province', 'pension-contribution', 'housing-fund', 'flexible-contributions', 'pension-component', 'contribution-budget'] as const;
+export type LaborToolId = typeof LABOR_TOOL_IDS[number];
+
 export type ToolId =
   | 'home'
   | 'base64'
@@ -6,7 +9,7 @@ export type ToolId =
   | 'json-diff'
   | 'escape'
   | 'compound'
-  | 'labor'
+  | LaborToolId
   | 'crypto-market'
   | 'ahr999'
   | 'us-market';
@@ -14,7 +17,8 @@ export type ToolId =
 type ToolCategoryId = 'development' | 'calculation' | 'market';
 
 type Tool = {
-  id: Exclude<ToolId, 'home'>;
+  id: Exclude<ToolId, 'home' | 'labor'>;
+  secondary?: boolean;
   name: string;
   description: string;
   glyph: string;
@@ -27,18 +31,17 @@ type Tool = {
 };
 
 export const tools: Tool[] = [
-  {
-    id: 'labor',
-    name: '工资 · 社保 · 养老',
-    description: '用工成本 · 个税 · 退休情景 · 官方依据',
-    glyph: '¥',
-    category: 'calculation',
-    group: '用工与退休计算',
-    keywords: ['税前', '税后', '五险一金', '养老金', '退休', '公司成本', '灵活就业', '工资'],
-    kind: 'local',
-    status: '本地',
-    ready: true,
-  },
+  { id: "labor-cost", secondary: true, name: "用工成本", description: "城市＋月薪，查看已核验单位缴费。", glyph: "¥", category: 'calculation', group: '工资社保养老', keywords: ["公司成本", "企业成本", "税前", "五险一金"], kind: 'local', status: '本地', ready: true },
+  { id: "salary-net", name: "工资测算", description: "个人收入、五险一金与公司支出，同页比较。", glyph: "到", category: 'calculation', group: '工资社保养老', keywords: ["税前", "税后", "工资", "个税", "反推", "公司成本", "企业成本", "公积金", "三险"], kind: 'local', status: '本地', ready: true },
+  { id: "retirement-pension", name: "社保退休金测算", description: "缴费时间线、退休结果与目标养老金方案。", glyph: "领", category: 'calculation', group: '工资社保养老', keywords: ["养老金", "退休", "上海", "北京", "浙江"], kind: 'local', status: '本地', ready: true },
+  { id: "annual-tax", name: "年度个税汇算", description: "核对全年综合所得补退税。", glyph: "年", category: 'calculation', group: '工资社保养老', keywords: ["个税", "年度", "汇算"], kind: 'local', status: '本地', ready: true, secondary: true },
+  { id: "retirement-date", name: "退休日期", description: "核对退休日期及最低缴费年限。", glyph: "日", category: 'calculation', group: '工资社保养老', keywords: ["退休", "延退", "年龄"], kind: 'local', status: '本地', ready: true, secondary: true },
+  { id: "benefit-province", name: "养老金领取省份", description: "按已核定跨省经历判断领取省。", glyph: "省", category: 'calculation', group: '工资社保养老', keywords: ["养老金", "跨省", "领取地"], kind: 'local', status: '本地', ready: true, secondary: true },
+  { id: "pension-contribution", name: "养老缴费单项", description: "按已核定基数计算养老缴费。", glyph: "缴", category: 'calculation', group: '工资社保养老', keywords: ["养老", "社保", "灵活就业"], kind: 'local', status: '本地', ready: true, secondary: true },
+  { id: "housing-fund", name: "公积金月额", description: "北京企业、温州限定人群单项计算。", glyph: "房", category: 'calculation', group: '工资社保养老', keywords: ["住房", "公积金", "温州"], kind: 'local', status: '本地', ready: true, secondary: true },
+  { id: "flexible-contributions", name: "北京个人三险", description: "仅通知规定个人参保渠道。", glyph: "险", category: 'calculation', group: '工资社保养老', keywords: ["北京", "个人参保", "灵活就业", "三险"], kind: 'local', status: '本地', ready: true, secondary: true },
+  { id: "pension-component", name: "养老金分项复核", description: "京浙经办核定单项，非总额。", glyph: "核", category: 'calculation', group: '工资社保养老', keywords: ["养老金", "北京", "浙江", "核定"], kind: 'local', status: '本地', ready: true, secondary: true },
+  { id: "contribution-budget", name: "分段缴费预算", description: "按自填月额累计支出，不认定权益。", glyph: "段", category: 'calculation', group: '工资社保养老', keywords: ["社保", "预算", "分段"], kind: 'local', status: '本地', ready: true, secondary: true },
   {
     id: 'compound',
     name: '复利计算器',
@@ -152,7 +155,7 @@ const categories: Array<{ id: ToolCategoryId; name: string }> = [
 // 首页、桌面导航和手机选择器共用分类，新增工具只需登记一次。
 export const toolCategories = categories.map((category) => ({
   ...category,
-  tools: tools.filter((tool) => tool.category === category.id),
+  tools: tools.filter((tool) => tool.category === category.id && !tool.secondary),
 }));
 
 export function filterToolCategories(search: string) {
@@ -163,4 +166,15 @@ export function filterToolCategories(search: string) {
       `${category.name} ${tool.name} ${tool.description} ${tool.group} ${tool.keywords?.join(' ') ?? ''}`.toLowerCase().includes(query),
     ),
   })).filter((category) => category.tools.length > 0);
+}
+
+/** Keep legacy bookmarks accessible without publishing separate navigation entries. */
+export function resolveToolHash(hash: string): ToolId {
+  const value = hash.startsWith('#') ? hash.slice(1) : hash;
+  if (value === 'labor') return 'labor';
+  return tools.find((tool) => tool.id === value && tool.ready)?.id ?? 'home';
+}
+
+export function isLaborToolId(id: ToolId): id is LaborToolId {
+  return (LABOR_TOOL_IDS as readonly string[]).includes(id);
 }

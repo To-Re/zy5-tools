@@ -1,124 +1,52 @@
-# 工资与养老：提交范围与发布验收
+# 工资与养老版本验证说明
 
-日期：2026-10-12。规则版本：`2026-10-12.1`。本地基线：`63fe2d1`。
+版本：`2026-10-12.3`。核验日期：2026-10-12。本文是本版本发布候选的验证记录，不是生产部署回执。实际发布与回滚按项目既有运维流程执行。
 
-**开发与本地验收完成；用户已批准本清单的76个站点文件与1份运维笔记提交、部署。** 以下为发布前验收快照，实际生产回执在发布后补充。用户反馈的页面文字过多、输入和结论不清晰已通过任务式改版处理；三个独立UX视角及独立法规/数值审核均无未解决P1/P2。旧浏览器通过结论不能替代本次复验。
+## 验证结论
 
-本版是证据支持下的有限计算工具，完整支持矩阵见 [LABOR.md](LABOR.md)。北京、上海、浙江含温州提供受限的养老缴费单项和普通关系省级判断；北京、浙江养老金总额仍禁用，不能称作三地完整待遇计算器。
+完整项目323项测试通过，ESLint、TypeScript、Vinext兼容检查与生产构建通过。独立审核工作流60组通过，覆盖真实规则注册表、独立手算、有理数包络、边界与反例；这些组包含在项目测试体系中，不应与323简单相加称为383项。
 
-## 主要交付
+桌面及320/390宽度的独立浏览器验收通过。本轮发现的可行方案被误清、未知现金画零、原计划已达标却未呈现等问题已复验关闭，无剩余发现项。浏览器审核为AI模拟新手任务，不是真人可用性实验，也不等于完整无障碍认证。
 
-- 八个按问题选择的任务；一次只展示一张相关表单，主结论与错误自动定位，计算明细和完整规则渐进展开。每项结果仍有直接官方原文链接。
-- 到手工资和单位成本分别使用独立接口：到手不要求单位资料，单位成本不要求个人个税背景。年度汇算与累计预扣分离。
-- 退休条件或领取省经历变更会使相关旧结果和确认失效。养老金虚构示例保留跨省草稿并明确脱钩；重新关联时清空金额及确认，恢复本人地区与退休限制。
-- 工资示例从任务选择到主结论为2次点击、0次滚动；320/390手机、键盘、错误、重置、重复操作、返回与刷新已独立复验。
+## 实际覆盖的验证
 
-## 可复核证据
+| 范围 | 主要证据 |
+| --- | --- |
+| 工资与缴费 | 城市与规则日期、基数上下限、工资分精度、逐项尾差拒算、个人现金不足、单位缺项不补零；固定12期税后与实际月预扣分开。 |
+| 退休与历史 | 出生月及原退休类别、最低年限、认可月数未知、账户未知、普通关系及领取省条件、历史重叠、1993起历史与2014前保底确认。 |
+| 养老金公式 | 历史指数和不能由舍入平均数反推；四位取舍上下界、分项进角、非整岁拒算、个人现金与账户入账分开。 |
+| 目标倒推 | 整元基数双门槛与30186个基数独立穷举一致；逐月搜索、预算边界、无解与未知区分、已证可行方案保留、最低投入诊断、原计划严格匹配后保留。 |
+| 京浙基础复核 | 标准基础公式可含已核普通中人/视同及40年；未知或特殊公式拒算，账户分项不随基础扩大，结果不合计为总养老金。 |
+| 状态与图表 | 示例编辑撤确认、旧结果清除、重置与重复操作、候选采用不改历史和账户；未知完整累计断线，已录部分另标；两图同年月轴及移动文字可读。 |
+| 引用 | 每结果独立依据入口保留公式、完整来源和适用范围；来源核查读官方正文，不以搜索摘要或HTTP成功代替规则核验。 |
 
-- 最终 `npm run verify`：141项测试全部通过，ESLint、TypeScript、Vinext兼容检查及纯静态构建通过。日志 `/tmp/zy5-labor-release-review-verify.log`。
-- `npm run deploy:dry-run`：26个静态文件、无运行时bindings，只预演，没有发布。日志 `/tmp/zy5-labor-release-review-dry-run.log`。
-- [独立法规与数值审核](labor-independent-audit.md)：30组独立测试通过；手算金值、关系先后、边界、拒算、来源和跨任务语义复验。
-- [工资新手任务](labor-ux-salary.md)、[跨省新手任务](labor-ux-province.md)、[手机与键盘审核](labor-ux-accessibility.md)：以各报告顶部/末尾最新结论为准，历史发现和截图保留用于追踪修复。
-- [早期浏览器记录](labor-browser-audit.md)保留历史功能证据，其旧可发布结论已经撤回。三个UX审阅是AI模拟审阅，不是真人实验，也不是完整WCAG认证。
+## 可重复核对的示例
 
-残余P3：错误字段尚无直接跳转/aria-invalid；极窄屏顶部工具名略截断；初次加载有短暂首页、刷新滚动位置可能保留；部分反推术语和重置后定位仍可改进。这些未被当前审阅者判为P1/P2，但未声称完美可用。
+所有示例均为虚构，不能当作用户事实或未来领取承诺。
 
-## 建议本次代码提交范围
+| 示例 | 已核结果 |
+| --- | --- |
+| 上海工资及上年月均均20000、公积金各5% | 个人每期3100；冻结12期税11760；年均净15920。单位仍有缺项，不给完整成本。 |
+| 北京工资10000、公积金各5%、虚构企业最终工伤率0.2% | 条件齐全的标准公司月成本13150。 |
+| 北京工资4500、公积金各5%的限定零税证明 | 个人缴费991.35；方案税0、年均净3508.65。证明失败不意味着实际必然有税。 |
+| 上海规划UI例：账户120000、历史152月、未来196月按12577基数 | 固定规则月额6358.60；未来个人现金197207.36。 |
+| 同例固定12577、目标2000，采用88个月方案 | 固定规则月额4297.90；未来个人现金88542.08；未列未来月明确停缴。 |
+| 北京或浙江经办核定B10000、全部年限40年 | 标准基础单项4000；不表示养老金总额或本工具认定40年资格。 |
 
-下列均为本任务修改或新增；提交时应以最终工作树为准，不能直接提交暂存区中较早的实现快照。
+规划独审另使用账户100000的黄金样例，金额不同是输入不同，不能与UI的120000示例混用。
 
-```text
-README.md
-components/labor-tool.module.css
-components/labor-tool.tsx
-components/toolbox-app.tsx
-docs/ARCHITECTURE.md
-docs/LABOR-REVIEW.md
-docs/LABOR.md
-docs/MOBILE.md
-docs/labor-audit/desktop-beijing-blocked-reason.png
-docs/labor-audit/desktop-cross-province.png
-docs/labor-audit/desktop-payroll-results.png
-docs/labor-audit/desktop-payroll.png
-docs/labor-audit/desktop-pension-results.png
-docs/labor-audit/mobile-contribution-320.png
-docs/labor-audit/mobile-cross-province-320.png
-docs/labor-audit/mobile-rule-320.png
-docs/labor-audit/ux-a11y-after-desktop-result.png
-docs/labor-audit/ux-a11y-after-desktop-tasks.png
-docs/labor-audit/ux-a11y-after-final-mobile320-result.png
-docs/labor-audit/ux-a11y-after-final-mobile390-result.png
-docs/labor-audit/ux-a11y-after-mobile320-result.png
-docs/labor-audit/ux-a11y-after-mobile320-tasks.png
-docs/labor-audit/ux-a11y-after-mobile390-result.png
-docs/labor-audit/ux-a11y-before-desktop.png
-docs/labor-audit/ux-a11y-before-mobile320-pension.png
-docs/labor-audit/ux-a11y-before-mobile320.png
-docs/labor-audit/ux-a11y-before-mobile390.png
-docs/labor-audit/ux-province-after-beijing.png
-docs/labor-audit/ux-province-after-blocked.png
-docs/labor-audit/ux-province-after-checklist.png
-docs/labor-audit/ux-province-after-example-cleared.png
-docs/labor-audit/ux-province-after-example.png
-docs/labor-audit/ux-province-after-reset-fixed.png
-docs/labor-audit/ux-province-after-result.png
-docs/labor-audit/ux-province-after-retirement.png
-docs/labor-audit/ux-province-after-stale-date-fixed.png
-docs/labor-audit/ux-province-after-stale-date.png
-docs/labor-audit/ux-province-after-stale.png
-docs/labor-audit/ux-province-before-form.png
-docs/labor-audit/ux-province-before-result.png
-docs/labor-audit/ux-province-final-independent.png
-docs/labor-audit/ux-province-final-relinked-beijing.png
-docs/labor-audit/ux-salary-after-cost-detail.png
-docs/labor-audit/ux-salary-after-edit-cleared.png
-docs/labor-audit/ux-salary-after-primary.png
-docs/labor-audit/ux-salary-after-unit-blocker.png
-docs/labor-audit/ux-salary-before-results.png
-docs/labor-audit/ux-salary-final-18000.png
-docs/labor-audit/ux-salary-final-cost.png
-docs/labor-audit/ux-salary-final-example.png
-docs/labor-audit/ux-salary-final-inverse.png
-docs/labor-audit/ux-salary-final-route.png
-docs/labor-browser-audit.md
-docs/labor-independent-audit.md
-docs/labor-research-beijing-pension.md
-docs/labor-research-beijing.md
-docs/labor-research-guangdong.md
-docs/labor-research-shanghai.md
-docs/labor-research-transfer.md
-docs/labor-research-zhejiang.md
-docs/labor-ux-accessibility.md
-docs/labor-ux-province.md
-docs/labor-ux-salary.md
-lib/labor-benefit-province.ts
-lib/labor-contribution-item.ts
-lib/labor-engine.ts
-lib/labor-ledger.ts
-lib/labor-rules.ts
-lib/tool-catalog.ts
-tests/labor-benefit-province.test.ts
-tests/labor-employer-cost.test.ts
-tests/labor-engine.test.ts
-tests/labor-independent.test.ts
-tests/labor-ledger.test.ts
-tests/labor-take-home.test.ts
-tests/tool-catalog.test.ts
-```
+## 仍保留的支持边界
 
-共76个文件：实现与入口9个、测试7个、文档16个、验收截图44个。截图为页面及虚构输入；旧截图是审计历史，不代表最终界面。
-未修改依赖锁文件、部署配置、账户、凭据、后端或域名配置；既有工具另仅涉及共用hash路由同步修正，已经复验冷开、刷新、返回及其他工具切换。
+上海失业不足分、公积金非整元等通用取舍缺口，单位完整成本缺项，北京一般税后与完整养老金、温州完整五险一金及税后、跨省养老金金额、非整岁计发月数和特殊待遇仍未开放。养老金规划中的视同/过渡排除与京浙已核基础分项复核是两种不同能力。
 
-## 独立知识库范围
+未知四位取舍影响最终金额时只给范围；范围不是实际未来待遇预测。原先工资整百与15000上限、三档基数、三月倍数、2014历史起点已不作为本版本的一般门槛。支持边界详见 [LABOR.md](LABOR.md)。
 
-另一个仓库仅涉及 `01 项目/个人工具站/个人工具站运维.md`，记录开发验收、支持边界及未发布状态。其余知识库改动和暂存内容均不属于本任务，不应一并提交。公开应用仓库未复制私人笔记或用户资料。
+## 最终证据文档
 
-## 必须继续保留的边界
+- [扩域状态](labor-domain-expansion-status.md)与[独立浏览器验收](labor-domain-expansion-ux.md)
+- [算法限制独立复审](labor-domain-limits-independent.md)与[规划器最终独审](labor-planner-independent-review.md)
+- [公开支持范围](labor-two-entry-public-scope.md)与[来源逐条核验](labor-two-entry-source-check.md)
+- [上海时间线依据](labor-shanghai-pension-timeline-evidence.md)
+- [北京证据状态](labor-beijing-expansion-status.md)与[浙江温州补证](labor-wenzhou-20261012-evidence-update.md)
 
-北京、浙江养老金总额/逆算/累计禁用；完整五险一金自动包禁用；临时账户、视同、特殊转移、跨制度权益混算和温州市级经办地判断禁用。上海金额只在已核人群、固定2026参数、表内整周岁下提供情景。缴费预算不等于权益，不能把各省养老金相加，累计领取窗口不是法定截止或计发月数。
-
-薪酬、出生月、账户及经历只保存在浏览器内存，不上传、不持久化；官方链接不带输入。显示AI辅助制作、仅供参考、自行复核原文及以主管部门核定为准。
-
-## 用户决定提交后的步骤
-
-按既有流程提交经过验收的最终源码，再执行已获授权的 `npm run deploy`；回读Worker新版本与流量，核对线上产物、真实页面和来源链接，再更新运维记录。当前生产仍为源码 `63fe2d1` / Worker Version `d6ca9467-a1c6-4786-927f-bd84ccf3108e`，没有新部署回执。Git提交不等于GitHub推送，本轮未推送。
+来源核验报告的覆盖对象有明确边界，不将上海两入口来源检查宣称为全站所有链接检查。研究过程中的旧建议以各报告最终扩域补审及本版本注册规则为准。本说明不依赖临时日志、截图或私人资料。

@@ -325,6 +325,7 @@ export function calculatePensionScenario(input: PensionInput, rule: PensionRule)
     const divisor = rule.accountDivisors[input.retirementAgeMonths / 12];
     if (!Number.isSafeInteger(divisor) || divisor <= 0) throw new Error('该退休年龄没有已核验计发月数');
     integer(input.contributionMonths, rule.minimumContributionMonths, Math.min(720, input.retirementAgeMonths), '累计缴费月数');
+    if (input.contributionMonths % 3 !== 0) throw new Error('余月折年保留四位的取舍方向尚未核验；本版仅支持累计月数为3的倍数的精确子域');
     integer(input.payoutYears, 1, 60, '累计领取窗口');
     money(input.pensionBaseCents, '待遇计发基数');
     money(input.personalAccountCents, '个人账户余额');
