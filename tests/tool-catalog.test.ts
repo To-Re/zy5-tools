@@ -5,7 +5,7 @@ import { filterToolCategories, toolCategories, tools } from '../lib/tool-catalog
 test('首页与导航分类覆盖全部工具，没有重复或遗漏', () => {
   assert.deepEqual(toolCategories.map(({ name, tools }) => [name, tools.map(({ id }) => id)]), [
     ['开发工具', ['base64', 'timestamp', 'json-viewer', 'json-diff', 'escape']],
-    ['计算工具', ['compound']],
+    ['计算工具', ['labor', 'compound']],
     ['行情', ['crypto-market', 'ahr999', 'us-market']],
   ]);
   const groupedIds = toolCategories.flatMap(({ tools }) => tools.map(({ id }) => id));
@@ -39,5 +39,12 @@ test('没有匹配时不留下空分类，搜索不会改变导航目录', () =>
   assert.deepEqual(filterToolCategories('不存在的工具_xyz'), []);
   filterToolCategories('复利');
   assert.deepEqual(filterToolCategories(''), toolCategories);
-  assert.equal(toolCategories.flatMap(({ tools }) => tools).length, 9);
+  assert.equal(toolCategories.flatMap(({ tools }) => tools).length, 10);
+});
+
+test('工资社保养老工具可从主要功能关键词定位且仅本地运行', () => {
+  for (const query of ['税前', '税后', '五险一金', '养老金', '灵活就业', '公司成本']) {
+    assert.deepEqual(filterToolCategories(query).flatMap(({ tools }) => tools.map(({ id }) => id)), ['labor']);
+  }
+  assert.equal(tools.find(({ id }) => id === 'labor')?.kind, 'local');
 });

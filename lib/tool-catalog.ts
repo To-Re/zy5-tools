@@ -6,6 +6,7 @@ export type ToolId =
   | 'json-diff'
   | 'escape'
   | 'compound'
+  | 'labor'
   | 'crypto-market'
   | 'ahr999'
   | 'us-market';
@@ -26,6 +27,18 @@ type Tool = {
 };
 
 export const tools: Tool[] = [
+  {
+    id: 'labor',
+    name: '工资 · 社保 · 养老',
+    description: '用工成本 · 个税 · 退休情景 · 官方依据',
+    glyph: '¥',
+    category: 'calculation',
+    group: '用工与退休计算',
+    keywords: ['税前', '税后', '五险一金', '养老金', '退休', '公司成本', '灵活就业', '工资'],
+    kind: 'local',
+    status: '本地',
+    ready: true,
+  },
   {
     id: 'compound',
     name: '复利计算器',

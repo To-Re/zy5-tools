@@ -42,6 +42,8 @@ ZY5 Tools 是一个 local-first 的单页工具箱。除行情组件外，输入
 
 ### 本地处理
 
+- 工资与养老工具 `#labor` 使用版本化公开规则 `lib/labor-rules.ts`、纯计算引擎 `lib/labor-engine.ts` 和金额预算 `lib/labor-ledger.ts`。薪酬、出生月、账户余额等输入只保存在组件内存；不写 localStorage、Cookie、URL、日志或网络，不提供导出。工具内切换任务保留内存草稿，离开工具或刷新清空。仅用户主动点击官方链接时访问对应外部站点。
+
 - 图片 Base64、时间戳、JSON、转义、复利和 AHR999 计算均在当前页面执行。
 - 复利参数和 JSON 阅读器草稿会自动保存在当前浏览器；其他本地工具输入刷新后消失。
 - 主题保存在 `zy5-tools-theme`。

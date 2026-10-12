@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Base64Tool } from '@/components/base64-tool';
 import { Ahr999Tool } from '@/components/ahr999-tool';
 import { CompoundCalculator } from '@/components/compound-calculator';
@@ -8,6 +8,7 @@ import { EscapeTool } from '@/components/escape-tool';
 import { JsonDiffTool } from '@/components/json-diff-tool';
 import { JsonViewerTool } from '@/components/json-viewer-tool';
 import { MarketTool } from '@/components/market-tool';
+import { LaborTool } from '@/components/labor-tool';
 import { TimestampTool } from '@/components/timestamp-tool';
 import { filterToolCategories, toolCategories, tools, type ToolId } from '@/lib/tool-catalog';
 
@@ -19,8 +20,14 @@ function getToolFromHash(): ToolId {
   return value && tools.some((tool) => tool.id === value && tool.ready) ? value : 'home';
 }
 
+function subscribeToHash(onChange: () => void) {
+  window.addEventListener('hashchange', onChange);
+  return () => window.removeEventListener('hashchange', onChange);
+}
+function getServerTool(): ToolId { return 'home'; }
+
 export function ToolboxApp() {
-  const [activeTool, setActiveTool] = useState<ToolId>('home');
+  const activeTool = useSyncExternalStore(subscribeToHash, getToolFromHash, getServerTool);
   const [search, setSearch] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -28,15 +35,11 @@ export function ToolboxApp() {
   useEffect(() => {
     const initialTheme = window.localStorage.getItem('zy5-tools-theme') === 'dark' ? 'dark' : 'light';
     document.documentElement.dataset.theme = initialTheme;
-    const syncHash = () => setActiveTool(getToolFromHash());
     const initialFrame = window.requestAnimationFrame(() => {
       setTheme(initialTheme);
-      syncHash();
     });
-    window.addEventListener('hashchange', syncHash);
     return () => {
       window.cancelAnimationFrame(initialFrame);
-      window.removeEventListener('hashchange', syncHash);
     };
   }, []);
 
@@ -45,7 +48,6 @@ export function ToolboxApp() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         window.location.hash = '';
-        setActiveTool('home');
         window.setTimeout(() => searchRef.current?.focus(), 0);
       }
     };
@@ -67,7 +69,6 @@ export function ToolboxApp() {
     const target = tools.find((tool) => tool.id === id);
     if (id === 'home' || target?.ready) {
       window.location.hash = id === 'home' ? '' : id;
-      setActiveTool(id);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -86,6 +87,8 @@ export function ToolboxApp() {
         return <EscapeTool />;
       case 'compound':
         return <CompoundCalculator />;
+      case 'labor':
+        return <LaborTool />;
       case 'crypto-market':
         return <MarketTool key="crypto" kind="crypto" theme={theme} />;
       case 'ahr999':
