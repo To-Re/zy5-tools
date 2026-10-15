@@ -8,9 +8,8 @@ import { EscapeTool } from '@/components/escape-tool';
 import { JsonDiffTool } from '@/components/json-diff-tool';
 import { JsonViewerTool } from '@/components/json-viewer-tool';
 import { MarketTool } from '@/components/market-tool';
-import { LaborTool } from '@/components/labor-tool';
 import { TimestampTool } from '@/components/timestamp-tool';
-import { filterToolCategories, toolCategories, tools, resolveToolHash, isLaborToolId, type ToolId } from '@/lib/tool-catalog';
+import { filterToolCategories, toolCategories, tools, resolveToolHash, type ToolId } from '@/lib/tool-catalog';
 
 const marketTools = tools.filter((tool) => tool.kind === 'market');
 
@@ -66,14 +65,13 @@ export function ToolboxApp() {
 
   const openTool = (id: ToolId) => {
     const target = tools.find((tool) => tool.id === id);
-    if (id === 'home' || id === 'labor' || target?.ready) {
+    if (id === 'home' || target?.ready) {
       window.location.hash = id === 'home' ? '' : id;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const activeWorkspace = (() => {
-    if (isLaborToolId(activeTool)) return <LaborTool page={activeTool} />;
     switch (activeTool) {
       case 'base64':
         return <Base64Tool />;
@@ -112,7 +110,6 @@ export function ToolboxApp() {
             onChange={(event) => openTool(event.target.value as ToolId)}
           >
             <option value="home">工具首页</option>
-            {isLaborToolId(activeTool) && !['salary-net', 'retirement-pension'].includes(activeTool) && <option value={activeTool}>工资与退休 · 旧链接</option>}
             {toolCategories.map((category) => (
               <optgroup key={category.id} label={category.name}>
                 {category.tools.map((tool) => <option key={tool.id} value={tool.id}>{tool.name}</option>)}
@@ -162,7 +159,7 @@ export function ToolboxApp() {
           {toolCategories.map((category) => (
             <div className="nav-section" key={category.id}>
               <p className="nav-label">{category.name} <span>{category.tools.length}</span></p>
-              {category.tools.filter((tool) => !tool.secondary).map((tool) => (
+              {category.tools.map((tool) => (
                 <button
                   className={`nav-item ${activeTool === tool.id ? 'active' : ''}`}
                   key={tool.id}
@@ -173,7 +170,6 @@ export function ToolboxApp() {
                   <span className="nav-glyph">{tool.glyph}</span>{tool.name}
                 </button>
               ))}
-
             </div>
           ))}
           <div className="sidebar-note">
@@ -196,7 +192,7 @@ export function ToolboxApp() {
                       <h2 id={`category-${category.id}`}>{category.name} <span>{category.tools.length}</span></h2>
                     </div>
                     <div className="tool-grid">
-                      {category.tools.filter((tool) => search.trim() || !tool.secondary).map((tool) => (
+                      {category.tools.map((tool) => (
                         <button
                           className="tool-card"
                           key={tool.id}
@@ -219,7 +215,6 @@ export function ToolboxApp() {
                         </button>
                       ))}
                     </div>
-
                   </section>
                 ))}
                 {matchCount === 0 && <p className="tool-empty-state">没有匹配的工具，换个关键词试试。</p>}
